@@ -1,0 +1,75 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #0a0f0a;
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  -webkit-font-smoothing: none;
+}
+
+.pixel {
+  font-family: "Press Start 2P", ui-monospace, monospace;
+  letter-spacing: 0.02em;
+}
+
+.pixelated {
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+.pbox {
+  border: 4px solid #0a0f0a;
+  box-shadow: 4px 4px 0 #0a0f0a;
+}
+
+.pbtn {
+  border: 4px solid #0a0f0a;
+  box-shadow: 4px 4px 0 #0a0f0a;
+  transition: transform 0.05s linear, box-shadow 0.05s linear;
+}
+
+.pbtn:active {
+  transform: translate(4px, 4px);
+  box-shadow: 0 0 0 #0a0f0a;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 12px;
+  background: #1b2a1b;
+  border: 3px solid #0a0f0a;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 14px;
+  height: 18px;
+  background: #6ddf5a;
+  border: 3px solid #0a0f0a;
+  cursor: pointer;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 18px;
+  background: #6ddf5a;
+  border: 3px solid #0a0f0a;
+  border-radius: 0;
+  cursor: pointer;
+}
+
+.touch-none {
+  touch-action: none;
+}
