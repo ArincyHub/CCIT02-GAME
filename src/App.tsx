@@ -18,6 +18,26 @@ function loadSettings(): Settings {
   return DEFAULTS;
 }
 
+function RotateScreen() {
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black landscape:hidden">
+      <div className="text-center text-white">
+        <div className="mb-6 text-7xl">
+          📱↻
+        </div>
+
+        <h1 className="text-2xl font-bold">
+          ROTATE YOUR PHONE
+        </h1>
+
+        <p className="mt-3 text-gray-400">
+          Please rotate your phone to landscape mode.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [screen, setScreen] = useState<ScreenName>("menu");
   const [settings, setSettings] = useState<Settings>(loadSettings);
@@ -25,17 +45,26 @@ export default function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem("silentstrike.settings", JSON.stringify(settings));
+      localStorage.setItem(
+        "silentstrike.settings",
+        JSON.stringify(settings)
+      );
     } catch {
       /* ignore */
     }
+
     music.current.setVolume(settings.volume);
   }, [settings]);
 
   useEffect(() => {
     const m = music.current;
-    if (screen === "game") m.stop();
-    else m.start();
+
+    if (screen === "game") {
+      m.stop();
+    } else {
+      m.start();
+    }
+
     return () => {
       if (screen !== "game") {
         /* keep playing across menu pages */
@@ -47,25 +76,39 @@ export default function App() {
     return () => music.current.stop();
   }, []);
 
-  if (screen === "game") {
-    return <GameScreen settings={settings} onExit={() => setScreen("menu")} />;
-  }
-
-  if (screen === "settings") {
-    return (
-      <SettingsScreen settings={settings} setSettings={setSettings} onBack={() => setScreen("menu")} />
-    );
-  }
-
-  if (screen === "socials") {
-    return <SocialsScreen onBack={() => setScreen("menu")} />;
-  }
-
   return (
-    <MainMenu
-      onPlay={() => setScreen("game")}
-      onSettings={() => setScreen("settings")}
-      onSocials={() => setScreen("socials")}
-    />
+    <>
+      {/* Show only when phone is portrait */}
+      <RotateScreen />
+
+      {screen === "game" && (
+        <GameScreen
+          settings={settings}
+          onExit={() => setScreen("menu")}
+        />
+      )}
+
+      {screen === "settings" && (
+        <SettingsScreen
+          settings={settings}
+          setSettings={setSettings}
+          onBack={() => setScreen("menu")}
+        />
+      )}
+
+      {screen === "socials" && (
+        <SocialsScreen
+          onBack={() => setScreen("menu")}
+        />
+      )}
+
+      {screen === "menu" && (
+        <MainMenu
+          onPlay={() => setScreen("game")}
+          onSettings={() => setScreen("settings")}
+          onSocials={() => setScreen("socials")}
+        />
+      )}
+    </>
   );
 }
