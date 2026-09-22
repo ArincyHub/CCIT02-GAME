@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import GameScreen from "./components/GameScreen";
-import LoadoutScreen from "./components/loadout";
+import LoadoutScreen from "./components/depot";
 import { GuideScreen, MainMenu, SettingsScreen, SocialsScreen } from "./components/Menu";
 import RotateGate from "./components/RotateGate";
 import { Settings } from "./game/engine";
