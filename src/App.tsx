@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import GameScreen from "./components/GameScreen";
-import LoadoutScreen from "./components/Loadout";
+import LoadoutScreen from "./components/loadout";
 import { GuideScreen, MainMenu, SettingsScreen, SocialsScreen } from "./components/Menu";
+import RotateGate from "./components/RotateGate";
 import { Settings } from "./game/engine";
 import { MenuMusic } from "./game/music";
 
@@ -43,35 +44,26 @@ export default function App() {
     return () => music.current.stop();
   }, []);
 
-  if (screen === "game") {
-    return <GameScreen settings={settings} onExit={() => setScreen("menu")} />;
-  }
-
-  if (screen === "settings") {
-    return (
+  const page =
+    screen === "game" ? (
+      <GameScreen settings={settings} onExit={() => setScreen("menu")} />
+    ) : screen === "settings" ? (
       <SettingsScreen settings={settings} setSettings={setSettings} onBack={() => setScreen("menu")} />
+    ) : screen === "socials" ? (
+      <SocialsScreen onBack={() => setScreen("menu")} />
+    ) : screen === "guide" ? (
+      <GuideScreen onBack={() => setScreen("menu")} />
+    ) : screen === "loadout" ? (
+      <LoadoutScreen onBack={() => setScreen("menu")} />
+    ) : (
+      <MainMenu
+        onPlay={() => setScreen("game")}
+        onSettings={() => setScreen("settings")}
+        onSocials={() => setScreen("socials")}
+        onGuide={() => setScreen("guide")}
+        onLoadout={() => setScreen("loadout")}
+      />
     );
-  }
 
-  if (screen === "socials") {
-    return <SocialsScreen onBack={() => setScreen("menu")} />;
-  }
-
-  if (screen === "guide") {
-    return <GuideScreen onBack={() => setScreen("menu")} />;
-  }
-
-  if (screen === "loadout") {
-    return <LoadoutScreen onBack={() => setScreen("menu")} />;
-  }
-
-  return (
-    <MainMenu
-      onPlay={() => setScreen("game")}
-      onSettings={() => setScreen("settings")}
-      onSocials={() => setScreen("socials")}
-      onGuide={() => setScreen("guide")}
-      onLoadout={() => setScreen("loadout")}
-    />
-  );
+  return <RotateGate>{page}</RotateGate>;
 }

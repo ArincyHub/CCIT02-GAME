@@ -13,7 +13,7 @@ export default function TouchControls({ hidden, onStick, onAttack, onSneak, onSk
   return (
     <div className="pointer-events-none absolute inset-0 z-10">
       <Joystick onChange={onStick} onEnd={() => onStick(0, 0)} />
-      <div className="pointer-events-auto absolute right-3 bottom-5 flex flex-col items-end gap-3 sm:right-8 sm:bottom-8">
+      <div className="pointer-events-auto absolute right-2 bottom-2 flex flex-col items-end gap-2 sm:right-6 sm:bottom-6 sm:gap-3">
         <HoldBtn label="SNEAK" small onChange={onSneak} />
         <div className="flex items-end gap-3">
           <HoldBtn label="SKILL" small onChange={(v) => { if (v) onSkill(); }} />
@@ -70,7 +70,7 @@ function Joystick({ onChange, onEnd }: { onChange: (x: number, y: number) => voi
       onPointerMove={move}
       onPointerUp={up}
       onPointerCancel={up}
-      className="pointer-events-auto absolute left-4 bottom-5 h-32 w-32 touch-none select-none sm:left-8 sm:bottom-8 sm:h-36 sm:w-36"
+      className="pointer-events-auto absolute left-2 bottom-2 h-24 w-24 touch-none select-none sm:left-6 sm:bottom-6 sm:h-32 sm:w-32"
       style={{
         background: "rgba(12,18,14,0.45)",
         border: "4px solid #0a0f0a",
@@ -79,7 +79,7 @@ function Joystick({ onChange, onEnd }: { onChange: (x: number, y: number) => voi
       }}
     >
       <div
-        className="absolute left-1/2 top-1/2 h-12 w-12 sm:h-14 sm:w-14"
+        className="absolute left-1/2 top-1/2 h-9 w-9 sm:h-12 sm:w-12"
         style={{
           transform: `translate(calc(-50% + ${knob.x}px), calc(-50% + ${knob.y}px))`,
           background: "#5cc447",
@@ -124,7 +124,7 @@ function HoldBtn({
       onPointerUp={release}
       onPointerCancel={release}
       className={`pixel touch-none select-none text-[#0a0f0a] ${
-        small ? "h-14 w-14 text-[8px] sm:h-16 sm:w-16" : "h-24 w-24 text-[12px] sm:h-28 sm:w-28"
+        small ? "h-11 w-11 text-[7px] sm:h-14 sm:w-14" : "h-16 w-16 text-[10px] sm:h-24 sm:w-24"
       }`}
       style={{
         background: down ? "#e2564c" : small ? "#c3c9cf" : "#d0483f",

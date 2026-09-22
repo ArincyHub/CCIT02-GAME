@@ -7,10 +7,10 @@ import { Panel, PixelButton, Screen } from "./ui";
 function Title() {
   return (
     <div className="pixel select-none text-center leading-none">
-      <div className="text-[34px] text-[#e9f5e9] sm:text-[52px]" style={{ textShadow: "5px 5px 0 #0a0f0a" }}>
+      <div className="text-[22px] text-[#e9f5e9] sm:text-[52px]" style={{ textShadow: "4px 4px 0 #0a0f0a" }}>
         SILENT
       </div>
-      <div className="mt-3 text-[34px] text-[#5cc447] sm:text-[52px]" style={{ textShadow: "5px 5px 0 #0a0f0a" }}>
+      <div className="mt-2 text-[22px] text-[#5cc447] sm:text-[52px]" style={{ textShadow: "4px 4px 0 #0a0f0a" }}>
         STRIKE
       </div>
     </div>
@@ -65,12 +65,12 @@ export function MainMenu({ onPlay, onSettings, onSocials, onGuide, onLoadout }: 
   return (
     <Screen>
       <Title />
-      <div className="mt-6 flex items-end gap-6">
+      <div className="mt-2 hidden items-end gap-6 sm:mt-6 sm:flex">
         <ArtPreview src="/sprites/enemy1.png" height={64} className="opacity-50" />
         <ArtPreview src="/sprites/player.png" height={88} />
         <ArtPreview src="/sprites/enemy1.png" height={64} className="opacity-50" />
       </div>
-      <div className="mt-8 flex w-56 flex-col gap-4">
+      <div className="mt-3 flex w-52 flex-col gap-2 sm:mt-8 sm:w-56 sm:gap-4">
         <MenuBtn color="green" onClick={onPlay}>
           <Ico>
             <path d="M3 2h3v12H3zM8 4h2v8H8zM12 6h2v4h-2z" />
@@ -102,7 +102,7 @@ export function MainMenu({ onPlay, onSettings, onSocials, onGuide, onLoadout }: 
           </IconOnly>
         </div>
       </div>
-      <p className="pixel mt-8 text-[8px] leading-relaxed text-[#7fa588]">5 FIGHTERS - LAST ONE LIVES</p>
+      <p className="pixel mt-3 text-[7px] leading-relaxed text-[#7fa588] sm:mt-8 sm:text-[8px]">5 FIGHTERS - LAST ONE LIVES</p>
     </Screen>
   );
 }

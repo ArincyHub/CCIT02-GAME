@@ -47,11 +47,9 @@ export default function GameScreen({ settings, onExit }: Props) {
   }, [paused]);
 
   useEffect(() => {
-    const el = wrapRef.current;
-    if (!el) return;
-    const fn = (e: TouchEvent) => e.preventDefault();
-    el.addEventListener("touchmove", fn, { passive: false });
-    return () => el.removeEventListener("touchmove", fn);
+    const stop = (e: TouchEvent) => e.preventDefault();
+    document.addEventListener("touchmove", stop, { passive: false });
+    return () => document.removeEventListener("touchmove", stop);
   }, []);
 
   const restart = () => {
@@ -63,15 +61,21 @@ export default function GameScreen({ settings, onExit }: Props) {
   const overlay = paused || !!result;
 
   return (
-    <div className="flex min-h-screen w-full flex-col items-center justify-center bg-[#07100b] p-3">
-      <div ref={wrapRef} className="relative w-full max-w-[960px] touch-none">
+    <div className="flex h-dvh w-full items-center justify-center overflow-hidden bg-[#07100b]">
+      <div
+        ref={wrapRef}
+        className="relative touch-none"
+        style={{
+          width: "min(100vw, calc(100dvh * 16 / 9))",
+          height: "min(100dvh, calc(100vw * 9 / 16))",
+        }}
+      >
         <canvas
           ref={canvasRef}
           width={VIEW_W}
           height={VIEW_H}
           onMouseDown={() => gameRef.current?.wakeAudio()}
-          className="pixelated block w-full cursor-crosshair border-4 border-[#0a0f0a] bg-[#4e9e3e]"
-          style={{ aspectRatio: `${VIEW_W} / ${VIEW_H}` }}
+          className="pixelated block h-full w-full cursor-crosshair bg-[#4e9e3e]"
         />
 
         <TouchControls
@@ -81,6 +85,16 @@ export default function GameScreen({ settings, onExit }: Props) {
           onSneak={(v) => gameRef.current?.setSneak(v)}
           onSkill={() => gameRef.current?.setSkill(true)}
         />
+
+        {!overlay && (
+          <button
+            type="button"
+            onClick={() => setPaused(true)}
+            className="pbtn pixel absolute top-2 right-2 z-20 bg-[#c3c9cf] px-3 py-2 text-[8px] text-[#0a0f0a]"
+          >
+            PAUSE
+          </button>
+        )}
 
         {paused && !result && (
           <Overlay>
@@ -113,15 +127,6 @@ export default function GameScreen({ settings, onExit }: Props) {
             </div>
           </Overlay>
         )}
-      </div>
-
-      <div className="mt-3 flex w-full max-w-[960px] items-center justify-between gap-3">
-        <p className="pixel text-[7px] leading-relaxed text-[#6f8f78] sm:text-[8px]">
-          WASD MOVE - HIT SWING - E / SKILL ITEM
-        </p>
-        <PixelButton color="grey" className="px-4 py-3 text-[9px]" onClick={() => setPaused(true)}>
-          PAUSE
-        </PixelButton>
       </div>
     </div>
   );

@@ -18,7 +18,7 @@ export function PixelButton({ children, onClick, color = "green", className = ""
     <button
       type="button"
       onClick={onClick}
-      className={`pbtn pixel px-6 py-4 text-[11px] leading-none ${COLORS[color]} ${className}`}
+      className={`pbtn pixel px-4 py-3 text-[10px] leading-none sm:px-6 sm:py-4 sm:text-[11px] ${COLORS[color]} ${className}`}
     >
       {children}
     </button>
@@ -31,7 +31,7 @@ export function Panel({ children, className = "" }: { children: ReactNode; class
 
 export function Screen({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-screen w-full overflow-y-auto bg-[#0e1a12]">
+    <div className="relative h-dvh w-full overflow-hidden bg-[#0e1a12]">
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{
@@ -41,7 +41,7 @@ export function Screen({ children }: { children: ReactNode }) {
         }}
       />
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(80,200,90,0.16),transparent_60%)]" />
-      <div className="relative flex min-h-screen flex-col items-center justify-center p-6">{children}</div>
+      <div className="relative flex h-full flex-col items-center justify-center overflow-hidden p-3 sm:p-6">{children}</div>
     </div>
   );
 }
