@@ -61,15 +61,8 @@ export default function GameScreen({ settings, onExit }: Props) {
   const overlay = paused || !!result;
 
   return (
-    <div className="flex h-dvh w-full items-center justify-center overflow-hidden bg-[#07100b]">
-      <div
-        ref={wrapRef}
-        className="relative touch-none"
-        style={{
-          width: "min(100vw, calc(100dvh * 16 / 9))",
-          height: "min(100dvh, calc(100vw * 9 / 16))",
-        }}
-      >
+    <div className="h-dvh w-screen overflow-hidden bg-[#07100b]">
+      <div ref={wrapRef} className="relative h-full w-full touch-none">
         <canvas
           ref={canvasRef}
           width={VIEW_W}

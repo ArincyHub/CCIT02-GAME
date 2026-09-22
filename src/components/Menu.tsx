@@ -7,10 +7,16 @@ import { Panel, PixelButton, Screen } from "./ui";
 function Title() {
   return (
     <div className="pixel select-none text-center leading-none">
-      <div className="text-[22px] text-[#e9f5e9] sm:text-[52px]" style={{ textShadow: "4px 4px 0 #0a0f0a" }}>
+      <div
+        className="text-[#e9f5e9]"
+        style={{ textShadow: "4px 4px 0 #0a0f0a", fontSize: "clamp(18px, 6vh, 52px)" }}
+      >
         SILENT
       </div>
-      <div className="mt-2 text-[22px] text-[#5cc447] sm:text-[52px]" style={{ textShadow: "4px 4px 0 #0a0f0a" }}>
+      <div
+        className="mt-2 text-[#5cc447]"
+        style={{ textShadow: "4px 4px 0 #0a0f0a", fontSize: "clamp(18px, 6vh, 52px)" }}
+      >
         STRIKE
       </div>
     </div>
@@ -48,7 +54,7 @@ function IconOnly({ onClick, label, children }: { onClick: () => void; label: st
       aria-label={label}
       title={label}
       onClick={onClick}
-      className="pbtn flex h-12 w-12 items-center justify-center bg-[#c3c9cf] text-[#0a0f0a] hover:bg-[#d6dce2]"
+      className="menu-icons pbtn flex items-center justify-center bg-[#c3c9cf] text-[#0a0f0a] hover:bg-[#d6dce2]"
     >
       {children}
     </button>
