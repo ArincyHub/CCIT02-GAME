@@ -1,3 +1,5 @@
+import { ReactNode } from "react";
+import { GUIDE } from "../game/buildGuide";
 import { Settings } from "../game/engine";
 import ArtPreview from "./ArtPreview";
 import { Panel, PixelButton, Screen } from "./ui";
@@ -15,10 +17,50 @@ function Title() {
   );
 }
 
-export function MainMenu({ onPlay, onSettings, onSocials }: {
+function Ico({ children }: { children: ReactNode }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor" className="pointer-events-none shrink-0">
+      {children}
+    </svg>
+  );
+}
+
+function MenuBtn({
+  onClick,
+  color = "grey",
+  children,
+}: {
+  onClick: () => void;
+  color?: "green" | "grey";
+  children: ReactNode;
+}) {
+  return (
+    <PixelButton onClick={onClick} color={color} className="flex w-full items-center justify-center gap-3">
+      {children}
+    </PixelButton>
+  );
+}
+
+function IconOnly({ onClick, label, children }: { onClick: () => void; label: string; children: ReactNode }) {
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={label}
+      onClick={onClick}
+      className="pbtn flex h-12 w-12 items-center justify-center bg-[#c3c9cf] text-[#0a0f0a] hover:bg-[#d6dce2]"
+    >
+      {children}
+    </button>
+  );
+}
+
+export function MainMenu({ onPlay, onSettings, onSocials, onGuide, onLoadout }: {
   onPlay: () => void;
   onSettings: () => void;
   onSocials: () => void;
+  onGuide: () => void;
+  onLoadout: () => void;
 }) {
   return (
     <Screen>
@@ -29,13 +71,36 @@ export function MainMenu({ onPlay, onSettings, onSocials }: {
         <ArtPreview src="/sprites/enemy1.png" height={64} className="opacity-50" />
       </div>
       <div className="mt-8 flex w-56 flex-col gap-4">
-        <PixelButton onClick={onPlay}>PLAY</PixelButton>
-        <PixelButton color="grey" onClick={onSettings}>
-          SETTINGS
-        </PixelButton>
-        <PixelButton color="grey" onClick={onSocials}>
-          SOCIALS
-        </PixelButton>
+        <MenuBtn color="green" onClick={onPlay}>
+          <Ico>
+            <path d="M3 2h3v12H3zM8 4h2v8H8zM12 6h2v4h-2z" />
+          </Ico>
+          PLAY
+        </MenuBtn>
+        <MenuBtn onClick={onLoadout}>
+          <Ico>
+            <path d="M6 2h4v3H6zM4 6h8v6H4zM5 13h2v2H5zM9 13h2v2H9z" />
+          </Ico>
+          LOADOUT
+        </MenuBtn>
+        <MenuBtn onClick={onGuide}>
+          <Ico>
+            <path d="M3 2h10v12H3zM5 4h6v2H5zM5 8h6v1H5zM5 10h4v1H5z" />
+          </Ico>
+          GUIDE
+        </MenuBtn>
+        <div className="mt-2 flex justify-center gap-4">
+          <IconOnly onClick={onSettings} label="SETTINGS">
+            <Ico>
+              <path d="M6 1h4v2H6zM1 6h2v4H1zM13 6h2v4h-2zM6 13h4v2H6zM5 5h6v6H5z" />
+            </Ico>
+          </IconOnly>
+          <IconOnly onClick={onSocials} label="SOCIALS">
+            <Ico>
+              <path d="M3 3h4v4H3zM9 5h4v4H9zM2 10h6v4H2zM9 11h5v3H9z" />
+            </Ico>
+          </IconOnly>
+        </div>
       </div>
       <p className="pixel mt-8 text-[8px] leading-relaxed text-[#7fa588]">5 FIGHTERS - LAST ONE LIVES</p>
     </Screen>
@@ -108,6 +173,27 @@ const LINKS = [
   { name: "YOUTUBE", url: "https://youtube.com" },
   { name: "ROBLOX", url: "https://roblox.com" },
 ];
+
+export function GuideScreen({ onBack }: { onBack: () => void }) {
+  return (
+    <Screen>
+      <Panel className="w-full max-w-lg">
+        <h2 className="pixel mb-6 text-[18px] text-[#5cc447]">GUIDE</h2>
+        <div className="space-y-5">
+          {GUIDE.map((g) => (
+            <div key={g.title}>
+              <p className="pixel text-[11px] text-[#e9f5e9]">{g.title}</p>
+              <p className="mt-2 font-mono text-[14px] leading-relaxed text-[#9bb89b]">{g.text}</p>
+            </div>
+          ))}
+        </div>
+        <PixelButton color="grey" className="mt-8 w-full" onClick={onBack}>
+          BACK
+        </PixelButton>
+      </Panel>
+    </Screen>
+  );
+}
 
 export function SocialsScreen({ onBack }: { onBack: () => void }) {
   return (

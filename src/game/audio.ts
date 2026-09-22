@@ -1,7 +1,7 @@
 // Simple Web Audio sound effects. Everything is made with noise + oscillators,
 // so there are no sound files to load.
 
-export type SoundKind = "step" | "swing" | "hit" | "death" | "reveal" | "hide" | "hurt";
+export type SoundKind = "step" | "swing" | "hit" | "death" | "reveal" | "hide" | "hurt" | "boom" | "pickup";
 
 export class Sfx {
   private ctx: AudioContext | null = null;
@@ -81,6 +81,12 @@ export class Sfx {
         break;
       case "hide":
         this.beep(vol, [392, 262], t);
+        break;
+      case "boom":
+        this.boom(vol, pan, t);
+        break;
+      case "pickup":
+        this.beep(vol, [520, 780], t);
         break;
     }
   }
@@ -172,6 +178,32 @@ export class Sfx {
     gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.6);
     osc.start(t);
     osc.stop(t + 0.62);
+  }
+
+  private boom(vol: number, pan: number, t: number) {
+    const { ctx, gain } = this.chain(pan);
+    const src = this.noise(gain, 0.5);
+    const lp = ctx.createBiquadFilter();
+    lp.type = "lowpass";
+    lp.frequency.value = 220;
+    src.disconnect();
+    src.connect(lp);
+    lp.connect(gain);
+    gain.gain.setValueAtTime(vol * 0.7, t);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    src.start(t);
+    src.stop(t + 0.42);
+    const osc = ctx.createOscillator();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(40, t + 0.35);
+    const og = ctx.createGain();
+    og.gain.setValueAtTime(vol * 0.3, t);
+    og.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    osc.connect(og);
+    og.connect(this.master!);
+    osc.start(t);
+    osc.stop(t + 0.42);
   }
 
   private beep(vol: number, notes: number[], t: number) {

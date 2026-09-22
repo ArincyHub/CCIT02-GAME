@@ -1,13 +1,28 @@
 import { Sfx, SoundKind } from "./audio";
 import { drawText, textWidth } from "./font";
 import {
+  BOMB_DMG,
+  BOMB_RANGE,
+  LOOT_COUNT,
+  LOOT_REFRESH,
+  LOOT_SPAWN_GAP,
+  LOOT_START_DELAY,
+  drawItemIcon,
+  HEAL_AMT,
+  ItemId,
+  ITEMS,
+  randomItem,
+  REVEAL_TIME,
+  SPEED_TIME,
+} from "./items";
+import { CHARACTERS, WEAPONS } from "./loadout";
+import {
   buildSprite,
   buildSwordSprite,
   CharSprite,
   ENEMY_PALS,
   ENEMY_TINTS,
   loadArt,
-  PLAYER_PAL,
   SPRITE_H,
   SPRITE_W,
   tintCanvas,
@@ -30,11 +45,11 @@ export const VIEW_H = 180;
 // How long a swing lasts       -> SWING_TIME
 // Map size                     -> WORLD_W / WORLD_H
 // ============================================================
-export const HIDDEN_TIME = 10;
-export const VISIBLE_TIME = 3;
+export const HIDDEN_TIME = 20;
+export const VISIBLE_TIME = 5;
 export const HIT_RANGE = 42;
 export const SWORD_SIZE = 34;
-export const SWING_TIME = 0.42;
+export const SWING_TIME = 0.5;
 export const WORLD_W = 480;
 export const WORLD_H = 320;
 
@@ -63,6 +78,8 @@ type Fighter = {
   flash: number;
   reveal: number;
   kills: number;
+  shield: boolean;
+  boost: number;
   sprite: CharSprite;
   art: HTMLCanvasElement | null;
   think: number;
@@ -75,6 +92,8 @@ type Fighter = {
 
 type Ripple = { x: number; y: number; r: number; max: number; color: string };
 type Corpse = { x: number; y: number; sprite: CharSprite };
+type Loot = { x: number; y: number; id: ItemId };
+type Boom = { x: number; y: number; r: number; max: number; life: number };
 
 function rnd(a: number, b: number) {
   return a + Math.random() * (b - a);
@@ -103,6 +122,8 @@ const SOUND_RANGE: Record<SoundKind, number> = {
   reveal: 999,
   hide: 999,
   hurt: 999,
+  boom: 240,
+  pickup: 80,
 };
 
 const DIFF = {
@@ -124,8 +145,23 @@ export class Game {
   private fighters: Fighter[] = [];
   private corpses: Corpse[] = [];
   private ripples: Ripple[] = [];
+  private loot: Loot[] = [];
+  private booms: Boom[] = [];
+  private held: ItemId | null = null;
+  private itemReveal = 0;
+  private hitRange = HIT_RANGE;
+  private charId = 0;
+  private weaponId = 0;
   private swordSpr: HTMLCanvasElement;
   private swordArt: HTMLCanvasElement | null = null;
+  private itemArt: Partial<Record<ItemId, HTMLCanvasElement>> = {};
+  private itemIcon: Record<ItemId, HTMLCanvasElement> = {
+    bomb: drawItemIcon("bomb"),
+    reveal: drawItemIcon("reveal"),
+    heal: drawItemIcon("heal"),
+    speed: drawItemIcon("speed"),
+    shield: drawItemIcon("shield"),
+  };
 
   private keys = new Set<string>();
   private mouse = { x: VIEW_W / 2, y: VIEW_H / 2, down: false };
@@ -133,10 +169,13 @@ export class Game {
   stickY = 0;
   attackBtn = false;
   sneakBtn = false;
+  skillBtn = false;
   private padStickX = 0;
   private padStickY = 0;
   private padAttack = false;
   private padSneak = false;
+  private padSkill = false;
+  private prevPadSkill = false;
   private prevStart = false;
 
   private raf = 0;
@@ -155,7 +194,13 @@ export class Game {
 
   constructor(
     canvas: HTMLCanvasElement,
-    opts: { settings: Settings; onEnd: (r: Result) => void; onPause: () => void },
+    opts: {
+      settings: Settings;
+      onEnd: (r: Result) => void;
+      onPause: () => void;
+      charId?: number;
+      weaponId?: number;
+    },
   ) {
     this.canvas = canvas;
     this.canvas.width = VIEW_W;
@@ -166,13 +211,29 @@ export class Game {
     this.onEnd = opts.onEnd;
     this.onPause = opts.onPause;
     this.sfx.setVolume(opts.settings.volume);
-    this.swordSpr = buildSwordSprite();
-    loadArt("/sprites/sword.png", (c) => {
+    this.charId = opts.charId ?? 0;
+    this.weaponId = opts.weaponId ?? 0;
+    const wep = WEAPONS[this.weaponId] ?? WEAPONS[0];
+    this.hitRange = wep.range;
+    this.swordSpr = buildSwordSprite({ handle: wep.handle, blade: wep.blade, pommel: wep.pommel });
+    if (wep.id === 0) {
+      loadArt("/sprites/sword.png", (c) => {
+        this.swordArt = c;
+      });
+    }
+    loadArt(wep.file, (c) => {
       this.swordArt = c;
     });
+    for (const it of ITEMS) {
+      loadArt(it.file, (c) => {
+        this.itemArt[it.id] = c;
+      });
+    }
 
     this.bg = this.buildWorld();
     this.spawnFighters();
+    this.loot = [];
+    this.lootWait = LOOT_START_DELAY;
   }
 
   // ---------- setup ----------
@@ -314,7 +375,9 @@ export class Game {
 
   private makeFighter(id: number, player: boolean, x: number, y: number): Fighter {
     const d = DIFF[this.settings.difficulty];
-    const sprite = buildSprite(player ? PLAYER_PAL : ENEMY_PALS[(id - 1) % ENEMY_PALS.length]);
+    const ch = CHARACTERS[this.charId] ?? CHARACTERS[0];
+    const pal = player ? ch.palette : ENEMY_PALS[(id - 1) % ENEMY_PALS.length];
+    const sprite = buildSprite(pal);
     const f: Fighter = {
       id,
       player,
@@ -336,6 +399,8 @@ export class Game {
       flash: 0,
       reveal: 0,
       kills: 0,
+      shield: false,
+      boost: 0,
       sprite,
       art: null,
       think: 0,
@@ -345,10 +410,18 @@ export class Game {
       sight: d.sight,
       nerve: d.aggro,
     };
-    const url = player ? "/sprites/player.png" : "/sprites/enemy1.png";
-    loadArt(url, (c) => {
-      f.art = player || id === 1 ? c : tintCanvas(c, ENEMY_TINTS[id % ENEMY_TINTS.length]);
-    });
+    if (player) {
+      loadArt("/sprites/player.png", (c) => {
+        if (!f.art) f.art = c;
+      });
+      loadArt(ch.file, (c) => {
+        f.art = c;
+      });
+    } else {
+      loadArt("/sprites/enemy1.png", (c) => {
+        f.art = id === 1 ? c : tintCanvas(c, ENEMY_TINTS[id % ENEMY_TINTS.length]);
+      });
+    }
     return f;
   }
 
@@ -361,6 +434,28 @@ export class Game {
       { x: WORLD_W - 40, y: WORLD_H - 36 },
     ];
     spots.forEach((s, i) => this.fighters.push(this.makeFighter(i + 1, false, s.x, s.y)));
+  }
+
+  // Items spawn later, one by one. Empty map -> wait -> spawn again.
+  // Numbers: src/game/items.ts
+  private lootWait = 0;
+
+  private spawnOneLoot() {
+    for (let n = 0; n < 24; n++) {
+      const x = rnd(28, WORLD_W - 28);
+      const y = rnd(32, WORLD_H - 28);
+      let hit = false;
+      for (const o of this.obstacles) {
+        if (x > o.x - 10 && x < o.x + o.w + 10 && y > o.y - 10 && y < o.y + o.h + 10) {
+          hit = true;
+          break;
+        }
+      }
+      if (hit) continue;
+      this.loot.push({ x, y, id: randomItem() });
+      return;
+    }
+    this.loot.push({ x: WORLD_W / 2, y: 80, id: randomItem() });
   }
 
   // ---------- lifecycle ----------
@@ -420,6 +515,15 @@ export class Game {
     this.sneakBtn = v;
   }
 
+  setSkill(v: boolean) {
+    this.skillBtn = v;
+    if (v) this.useItem();
+  }
+
+  heldItem() {
+    return this.held;
+  }
+
   // ---------- input ----------
 
   private onKeyDown = (e: KeyboardEvent) => {
@@ -429,7 +533,9 @@ export class Game {
       return;
     }
     if ([" ", "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) e.preventDefault();
-    this.keys.add(e.key.toLowerCase());
+    const k = e.key.toLowerCase();
+    if (k === "e" || k === "q" || k === "f") this.useItem();
+    this.keys.add(k);
   };
 
   private onKeyUp = (e: KeyboardEvent) => {
@@ -467,6 +573,7 @@ export class Game {
       const btn = (i: number) => !!pad.buttons[i]?.pressed;
       if (btn(0) || btn(2) || btn(5) || btn(7)) attack = true;
       if (btn(1) || btn(4) || btn(6)) sneak = true;
+      if (btn(3)) this.padSkill = true;
       if (btn(9) || btn(8)) start = true;
     }
     const dead = 0.22;
@@ -479,6 +586,9 @@ export class Game {
     }
     this.padAttack = attack;
     this.padSneak = sneak;
+    if (this.padSkill && !this.prevPadSkill) this.useItem();
+    this.prevPadSkill = this.padSkill;
+    this.padSkill = false;
     if (start && !this.prevStart) this.onPause();
     this.prevStart = start;
   }
@@ -515,6 +625,7 @@ export class Game {
     }
 
     const player = this.fighters[0];
+    this.itemReveal = Math.max(0, this.itemReveal - dt);
     if (player.alive) this.controlPlayer(player, dt);
 
     for (const f of this.fighters) {
@@ -524,13 +635,39 @@ export class Game {
       this.updateSwing(f, dt);
       f.flash = Math.max(0, f.flash - dt);
       f.reveal = Math.max(0, f.reveal - dt);
+      f.boost = Math.max(0, f.boost - dt);
       if (f.cooldown > 0) f.cooldown -= dt;
+    }
+
+    if (player.alive) {
+      for (let i = this.loot.length - 1; i >= 0; i--) {
+        const L = this.loot[i];
+        if (Math.hypot(L.x - player.x, L.y - player.y) < 12) {
+          this.held = L.id;
+          this.loot.splice(i, 1);
+          this.sfx.play("pickup", 0.7, 0);
+          if (this.loot.length === 0) this.lootWait = LOOT_REFRESH;
+        }
+      }
+    }
+    if (this.loot.length < LOOT_COUNT) {
+      this.lootWait -= dt;
+      if (this.lootWait <= 0) {
+        this.spawnOneLoot();
+        this.lootWait = this.loot.length === 0 ? LOOT_REFRESH : LOOT_SPAWN_GAP;
+      }
     }
 
     for (let i = this.ripples.length - 1; i >= 0; i--) {
       const r = this.ripples[i];
       r.r += dt * 90;
       if (r.r > r.max) this.ripples.splice(i, 1);
+    }
+    for (let i = this.booms.length - 1; i >= 0; i--) {
+      const b = this.booms[i];
+      b.r += dt * 140;
+      b.life -= dt;
+      if (b.life <= 0) this.booms.splice(i, 1);
     }
   }
 
@@ -544,7 +681,7 @@ export class Game {
     if (k.has("s") || k.has("arrowdown")) dy += 1;
     const len = Math.hypot(dx, dy);
     p.sneak = k.has("shift") || this.sneakBtn || this.padSneak;
-    const sp = p.speed * (p.sneak ? 0.5 : 1);
+    const sp = p.speed * (p.sneak ? 0.5 : 1) * (p.boost > 0 ? 1.45 : 1);
     if (len > 0.18) {
       p.vx = (dx / len) * sp;
       p.vy = (dy / len) * sp;
@@ -677,25 +814,52 @@ export class Game {
   private updateSwing(f: Fighter, dt: number) {
     if (f.swing <= 0) return;
     f.swing -= dt;
-    if (!f.swung && f.swing <= SWING_TIME * 0.45) {
+    if (!f.swung && f.swing <= SWING_TIME * 0.5) {
       f.swung = true;
       for (const o of this.fighters) {
         if (o === f || !o.alive) continue;
-        const dx = o.x - f.x;
-        const dy = o.y - f.y;
-        const d = Math.hypot(dx, dy);
-        if (d > HIT_RANGE + BODY_R) continue;
-        let diff = Math.atan2(dy, dx) - f.dir;
-        while (diff > Math.PI) diff -= Math.PI * 2;
-        while (diff < -Math.PI) diff += Math.PI * 2;
-        if (Math.abs(diff) < 1.25) this.damage(o, f);
+        const d = Math.hypot(o.x - f.x, o.y - f.y);
+        if (d <= this.hitRange + BODY_R) this.damage(o, f, 1);
       }
     }
     if (f.swing < 0) f.swing = 0;
   }
 
-  private damage(target: Fighter, from: Fighter) {
-    target.hp -= 1;
+  private useItem() {
+    const p = this.fighters[0];
+    if (!p || !p.alive || !this.held || this.over || this.paused) return;
+    const id = this.held;
+    this.held = null;
+    if (id === "bomb") {
+      this.booms.push({ x: p.x, y: p.y, r: 6, max: BOMB_RANGE, life: 0.35 });
+      this.sfx.play("boom", 0.9, 0);
+      for (const o of this.fighters) {
+        if (o === p || !o.alive) continue;
+        if (Math.hypot(o.x - p.x, o.y - p.y) <= BOMB_RANGE) this.damage(o, p, BOMB_DMG);
+      }
+    } else if (id === "reveal") {
+      this.itemReveal = REVEAL_TIME;
+      this.sfx.play("reveal", 0.9, 0);
+    } else if (id === "heal") {
+      p.hp = Math.min(p.maxHp, p.hp + HEAL_AMT);
+      this.sfx.play("pickup", 0.8, 0);
+    } else if (id === "speed") {
+      p.boost = SPEED_TIME;
+      this.sfx.play("pickup", 0.8, 0);
+    } else if (id === "shield") {
+      p.shield = true;
+      this.sfx.play("pickup", 0.8, 0);
+    }
+  }
+
+  private damage(target: Fighter, from: Fighter, amt = 1) {
+    if (target.shield) {
+      target.shield = false;
+      target.flash = 0.18;
+      this.emitSound("hit", target, 0.7);
+      return;
+    }
+    target.hp -= amt;
     target.flash = 0.22;
     target.reveal = 0.55;
     const a = Math.atan2(target.y - from.y, target.x - from.x);
@@ -804,6 +968,13 @@ export class Game {
       ctx.globalAlpha = 1;
     }
 
+    for (const L of this.loot) {
+      const lx = Math.round(L.x - this.camX);
+      const ly = Math.round(L.y - this.camY + Math.sin(this.time * 6) * 1);
+      const art = this.itemArt[L.id] ?? this.itemIcon[L.id];
+      ctx.drawImage(art, lx - 6, ly - 6, 12, 12);
+    }
+
     const order = this.fighters.filter((f) => f.alive).sort((a, b) => a.y - b.y);
     for (const f of order) this.drawFighter(f);
 
@@ -813,6 +984,15 @@ export class Game {
       ctx.globalAlpha = a;
       ctx.beginPath();
       ctx.arc(Math.round(r.x - this.camX), Math.round(r.y - this.camY), r.r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+    }
+
+    for (const b of this.booms) {
+      ctx.strokeStyle = "#ffb070";
+      ctx.globalAlpha = clamp(b.life / 0.35, 0, 1);
+      ctx.beginPath();
+      ctx.arc(Math.round(b.x - this.camX), Math.round(b.y - this.camY), b.r, 0, Math.PI * 2);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
@@ -831,7 +1011,7 @@ export class Game {
 
   private drawFighter(f: Fighter) {
     const ctx = this.ctx;
-    const visible = f.player || this.phase === "visible" || f.reveal > 0;
+    const visible = f.player || this.phase === "visible" || f.reveal > 0 || this.itemReveal > 0;
     if (!visible) return;
 
     const sx = Math.round(f.x - this.camX - SPRITE_W / 2);
@@ -874,7 +1054,14 @@ export class Game {
 
     this.drawSword(f, ghostMode ? 0.45 : 1);
 
-    if (!f.player && (this.phase === "visible" || f.reveal > 0)) {
+    if (f.shield) {
+      ctx.strokeStyle = "#7ad7e8";
+      ctx.beginPath();
+      ctx.arc(Math.round(f.x - this.camX), Math.round(f.y - this.camY - 4), 12, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+
+    if (!f.player && (this.phase === "visible" || f.reveal > 0 || this.itemReveal > 0)) {
       for (let i = 0; i < f.hp; i++) {
         ctx.fillStyle = "#0c0c12";
         ctx.fillRect(sx + 2 + i * 4, sy - 4, 3, 3);
@@ -915,23 +1102,23 @@ export class Game {
 
     if (f.swing > 0) {
       const p = 1 - f.swing / SWING_TIME;
-      for (let i = 1; i <= 5; i++) {
-        const t = p - i * 0.08;
+      for (let i = 1; i <= 8; i++) {
+        const t = p - i * 0.06;
         if (t < 0) continue;
-        const a = f.dir - 1.35 + t * 2.7;
-        this.blitSword(hx, hy, a, alpha * (0.18 + 0.08 * (5 - i)), 0.92);
+        const a = f.dir + t * Math.PI * 2;
+        this.blitSword(hx, hy, a, alpha * (0.12 + 0.06 * (8 - i)), 0.9);
       }
       ctx.save();
-      ctx.globalAlpha = alpha * 0.55;
+      ctx.globalAlpha = alpha * 0.45;
       ctx.strokeStyle = "#c4f6ff";
       ctx.lineWidth = 3;
       ctx.beginPath();
-      ctx.arc(hx, hy, SWORD_SIZE * 0.9, angle - 0.95, angle);
+      ctx.arc(hx, hy, SWORD_SIZE * 0.95, 0, Math.PI * 2);
       ctx.stroke();
       ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(hx, hy, SWORD_SIZE * 0.9, angle - 0.95, angle);
+      ctx.arc(hx, hy, SWORD_SIZE * 0.95, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -968,7 +1155,7 @@ export class Game {
     ctx.fillStyle = this.phase === "hidden" ? "#5aa9ff" : "#6ddf5a";
     ctx.fillRect(bx, 6, Math.round(bw * pct), 5);
 
-    const label = `${this.phase === "hidden" ? "Player will be hidden in" : "Player will be invinsible in"} ${Math.ceil(this.phaseLeft)}`;
+    const label = `${this.phase === "hidden" ? "HIDDEN" : "VISIBLE"} ${Math.ceil(this.phaseLeft)}`;
     drawText(ctx, label, Math.round(VIEW_W / 2 - textWidth(label) / 2), 16, "#e8f2e8", 1);
 
     const alive = this.fighters.filter((f) => f.alive).length;
@@ -977,6 +1164,19 @@ export class Game {
 
     if (player.sneak && player.alive) {
       drawText(ctx, "SNEAK", 6, VIEW_H - 11, "#a8e39a", 1);
+    }
+    if (this.held) {
+      const icon = this.itemArt[this.held] ?? this.itemIcon[this.held];
+      ctx.fillStyle = "#0c0c12";
+      ctx.fillRect(6, 18, 14, 14);
+      ctx.drawImage(icon, 7, 19, 12, 12);
+      drawText(ctx, "E", 22, 22, "#e8f2e8", 1);
+    }
+    if (this.itemReveal > 0) {
+      drawText(ctx, `SIGHT ${Math.ceil(this.itemReveal)}`, 6, 36, "#5aa9ff", 1);
+    }
+    if (player.boost > 0) {
+      drawText(ctx, "FAST", 6, VIEW_H - 20, "#f0c040", 1);
     }
   }
 }

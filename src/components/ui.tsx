@@ -16,6 +16,7 @@ const COLORS: Record<string, string> = {
 export function PixelButton({ children, onClick, color = "green", className = "" }: BtnProps) {
   return (
     <button
+      type="button"
       onClick={onClick}
       className={`pbtn pixel px-6 py-4 text-[11px] leading-none ${COLORS[color]} ${className}`}
     >
@@ -30,7 +31,7 @@ export function Panel({ children, className = "" }: { children: ReactNode; class
 
 export function Screen({ children }: { children: ReactNode }) {
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-[#0e1a12]">
+    <div className="relative min-h-screen w-full overflow-y-auto bg-[#0e1a12]">
       <div
         className="pointer-events-none absolute inset-0 opacity-30"
         style={{

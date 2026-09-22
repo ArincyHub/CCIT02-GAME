@@ -189,39 +189,37 @@ export function buildSprite(pal: Palette): CharSprite {
 }
 
 // Purple handle, cyan blade, yellow pommel - matches the sword art you sent.
-export function buildSwordSprite(): HTMLCanvasElement {
+export type SwordColors = {
+  handle: string;
+  blade: string;
+  pommel: string;
+};
+
+export function buildSwordSprite(col: SwordColors = { handle: "#6a2f9e", blade: "#7ad7e8", pommel: "#e8b43c" }): HTMLCanvasElement {
   const c = makeCanvas(36, 14);
   const g = c.getContext("2d")!;
 
-  const px = (x: number, y: number, w: number, h: number, col: string) => {
-    g.fillStyle = col;
+  const px = (x: number, y: number, w: number, h: number, color: string) => {
+    g.fillStyle = color;
     g.fillRect(x, y, w, h);
   };
 
-  // outline
   px(0, 3, 35, 8, "#0c0c12");
-  // pommel
-  px(1, 4, 4, 6, "#e8b43c");
+  px(1, 4, 4, 6, col.pommel);
   px(2, 5, 2, 4, "#ffe680");
-  // purple handle
-  px(5, 4, 9, 6, "#6a2f9e");
-  px(5, 4, 9, 2, "#8d55c8");
-  px(5, 8, 9, 2, "#4a1d78");
-  // cyan wrap on handle
-  px(7, 4, 2, 6, "#6ed3e6");
-  px(11, 4, 1, 6, "#6ed3e6");
-  // guard
-  px(14, 2, 4, 10, "#5ecfe0");
-  px(15, 3, 2, 8, "#c4f6ff");
-  // blade
-  px(18, 4, 15, 6, "#7ad7e8");
-  px(18, 4, 15, 2, "#d8fbff");
-  px(18, 8, 15, 2, "#3aa8c0");
-  // gold gleam
-  px(24, 6, 4, 2, "#f0c040");
-  // tip spark
+  px(5, 4, 9, 6, col.handle);
+  px(5, 4, 9, 2, "#ffffff");
+  px(5, 8, 9, 2, "#0c0c12");
+  px(7, 4, 2, 6, col.blade);
+  px(11, 4, 1, 6, col.blade);
+  px(14, 2, 4, 10, col.blade);
+  px(15, 3, 2, 8, "#ffffff");
+  px(18, 4, 15, 6, col.blade);
+  px(18, 4, 15, 2, "#ffffff");
+  px(18, 8, 15, 2, "#0c0c12");
+  px(24, 6, 4, 2, col.pommel);
   px(33, 5, 2, 4, "#fff6a8");
-  px(35, 6, 1, 2, "#ffe680");
+  px(35, 6, 1, 2, col.pommel);
   return c;
 }
 
